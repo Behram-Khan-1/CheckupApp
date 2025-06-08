@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro; // For TextMeshPro input and text, if you want nicer text
+using TMPro;
+using System; // For TextMeshPro input and text, if you want nicer text
 
 public class ChatManager : MonoBehaviour
 {
@@ -8,15 +9,26 @@ public class ChatManager : MonoBehaviour
     public GameObject userBubblePrefab; // Prefab for user messages
     public GameObject appBubblePrefab; // Prefab for app messages
     public TMP_InputField inputField; // User input field
-
+    string userMessage;
+    //Timer stuff
     [SerializeField] float initialTime = 3f;
     private float time;
 
     private bool isTyping = false;
     private bool messageSent = false; //For User Message Checking
-    private bool replySent = false; //For User Message Checking
+    private bool replySent = false; //For AI Message Checking
+
+    // API Portion
+    GeminiApiClient geminiApiClient;
+
+    //Prompt Stuff
+
+    PromptBuilder promptBuilder;
+
     void Start()
     {
+        geminiApiClient = gameObject.AddComponent<GeminiApiClient>();
+        promptBuilder = new PromptBuilder();
         time = initialTime;
         inputField.onValueChanged.AddListener(OnValueChanged);
     }
@@ -31,8 +43,10 @@ public class ChatManager : MonoBehaviour
 
     public void OnSendButtonClicked()
     {
-        string userMessage = inputField.text;
-        if (!string.IsNullOrEmpty(userMessage))
+        userMessage = inputField.text;
+        // CombineUserMessage();
+        promptBuilder.Append(userMessage);
+        if (!string.IsNullOrEmpty(userMessage) && !string.IsNullOrWhiteSpace(userMessage))
         {
             AddUserMessage(userMessage);
             inputField.text = "";
@@ -41,6 +55,8 @@ public class ChatManager : MonoBehaviour
             replySent = false;
         }
     }
+
+
 
     void AddUserMessage(string message)
     {
@@ -60,14 +76,15 @@ public class ChatManager : MonoBehaviour
     {
         if (isTyping == false)
         {
-            Debug.Log(time);
+            // Debug.Log(time);
             time = Timer.TimerStart(time);
             if (time <= 0 && replySent == false)
             {
-                AddAppMessage("Hello! How can I help you today?");
                 messageSent = false;
                 replySent = true;
-                time = initialTime;
+                time = initialTime; //Later make send button unclickable when not received reply
+                StartCoroutine(geminiApiClient.SendPrompt(promptBuilder.BuildGoalExtractionPrompt(), AddAppMessage, DisplayGoals));
+                promptBuilder.Reset();
             }
         }
         else
@@ -75,6 +92,13 @@ public class ChatManager : MonoBehaviour
             time = initialTime;
         }
     }
+
+    /// <summary>
+    /// Called when the input field value changes. Sets the isTyping flag based on whether
+    /// the input field has text. If the input field is empty and a message has been sent,
+    /// sets isTyping to false.
+    /// </summary>
+    /// <param name="text">The current text in the input field.</param>
 
     private void OnValueChanged(string text)
     {
@@ -87,4 +111,36 @@ public class ChatManager : MonoBehaviour
             isTyping = false;
         }
     }
+
+    public class Timer
+    {
+        public static float TimerStart(float time)
+        {
+            time = time - Time.deltaTime;
+
+            return time;
+        }
+    }
+
+    public void DisplayGoals(string jsonResponse)
+    {
+        try
+        {
+            GoalList goalList = JsonUtility.FromJson<GoalList>(jsonResponse);
+
+            foreach (Goal goal in goalList.goals)
+            {
+                string goalText = $"- {goal.text} [{goal.type}] Priority: {goal.priority}, Streak: {goal.streak}";
+                Debug.Log(goalText);
+                // AddAppMessage(goalText);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("Failed to parse goal JSON: " + ex.Message);
+            AddAppMessage("⚠️ Couldn't understand your goals. Try rephrasing.");
+        }
+    }
+
+
 }
