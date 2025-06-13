@@ -38,7 +38,8 @@ public class GeminiApiClient : MonoBehaviour
         {
 
             GeminiResponse res = JsonUtility.FromJson<GeminiResponse>(www.downloadHandler.text);
-            string reply = res.candidates[0].content.parts[0].text;
+            var cleanString = JsonHelper.CleanMarkdownJson(res.candidates[0].content.parts[0].text);
+            string reply = cleanString;
             response?.Invoke(reply);
 
             // If caller wants JSON processing

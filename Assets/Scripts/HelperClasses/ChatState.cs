@@ -2,5 +2,7 @@ enum ChatState
 {
     Idle,
     Typing,
-    WaitingForReply
+    MessageSent,
+    WaitingForReply,
+    ReplyReceived
 }

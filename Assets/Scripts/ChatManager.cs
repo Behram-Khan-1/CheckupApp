@@ -12,11 +12,9 @@ public class ChatManager : MonoBehaviour
     string userMessage;
     //Timer stuff
     [SerializeField] float initialTime = 3f;
-    private float time;
+    [SerializeField] private float time;
 
-    private bool isTyping = false;
-    private bool messageSent = false; //For User Message Checking
-    private bool replySent = false; //For AI Message Checking
+    [SerializeField] ChatState chatState;
 
     // API Portion
     GeminiApiClient geminiApiClient;
@@ -31,11 +29,12 @@ public class ChatManager : MonoBehaviour
         promptBuilder = new PromptBuilder();
         time = initialTime;
         inputField.onValueChanged.AddListener(OnValueChanged);
+
     }
 
     void Update()
     {
-        if (messageSent)
+        if (chatState == ChatState.MessageSent || chatState == ChatState.Typing)
         {
             ReplyTimer();
         }
@@ -50,9 +49,8 @@ public class ChatManager : MonoBehaviour
         {
             AddUserMessage(userMessage);
             inputField.text = "";
-            messageSent = true;
-            isTyping = false;
-            replySent = false;
+            chatState = ChatState.MessageSent;
+
         }
     }
 
@@ -74,23 +72,24 @@ public class ChatManager : MonoBehaviour
 
     private void ReplyTimer()
     {
-        if (isTyping == false)
-        {
-            // Debug.Log(time);
-            time = Timer.TimerStart(time);
-            if (time <= 0 && replySent == false)
-            {
-                messageSent = false;
-                replySent = true;
-                time = initialTime; //Later make send button unclickable when not received reply
-                StartCoroutine(geminiApiClient.SendPrompt(promptBuilder.BuildGoalExtractionPrompt(), AddAppMessage, DisplayGoals));
-                promptBuilder.Reset();
-            }
-        }
-        else
+        if (chatState == ChatState.Typing)
         {
             time = initialTime;
+            return;
         }
+
+        // Debug.Log(time);
+        time = Timer.TimerStart(time);
+        if (time <= 0)
+        {
+            chatState = ChatState.WaitingForReply;
+            time = initialTime; //Later make send button unclickable when not received reply
+            StartCoroutine(geminiApiClient.SendPrompt(promptBuilder.BuildGoalExtractionPrompt(),
+             AddAppMessage,
+              DisplayGoals));
+            promptBuilder.Reset();
+        }
+
     }
 
     /// <summary>
@@ -102,13 +101,13 @@ public class ChatManager : MonoBehaviour
 
     private void OnValueChanged(string text)
     {
-        if (inputField.text.Length > 0)
+        if (text.Length > 0)
         {
-            isTyping = true;
+            chatState = ChatState.Typing;
         }
-        if (inputField.text.Length == 0 && messageSent == true)
+        if (string.IsNullOrEmpty(text))
         {
-            isTyping = false;
+            chatState = ChatState.Idle;
         }
     }
 
@@ -126,14 +125,17 @@ public class ChatManager : MonoBehaviour
     {
         try
         {
+           
             GoalList goalList = JsonUtility.FromJson<GoalList>(jsonResponse);
 
             foreach (Goal goal in goalList.goals)
             {
                 string goalText = $"- {goal.text} [{goal.type}] Priority: {goal.priority}, Streak: {goal.streak}";
                 Debug.Log(goalText);
+
                 // AddAppMessage(goalText);
             }
+                chatState = ChatState.Idle;
         }
         catch (Exception ex)
         {
@@ -141,6 +143,7 @@ public class ChatManager : MonoBehaviour
             AddAppMessage("⚠️ Couldn't understand your goals. Try rephrasing.");
         }
     }
+
 
 
 }

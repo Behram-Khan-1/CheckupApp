@@ -626,6 +626,8 @@ MonoBehaviour:
   appBubblePrefab: {fileID: 4229866981938729909, guid: a3d9296f49ac2664a9b5bddbec5ea807, type: 3}
   inputField: {fileID: 1391721744}
   initialTime: 3
+  time: 0
+  chatState: 0
 --- !u!4 &1228158928
 Transform:
   m_ObjectHideFlags: 0
@@ -1755,7 +1757,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8388734265097911420, guid: e788b2b90128d644cbadf1d8c996d9cd, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 950
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8388734265097911420, guid: e788b2b90128d644cbadf1d8c996d9cd, type: 3}
       propertyPath: m_AnchoredPosition.y
@@ -1853,7 +1855,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2130721542614341591, guid: a3d9296f49ac2664a9b5bddbec5ea807, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 950
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2130721542614341591, guid: a3d9296f49ac2664a9b5bddbec5ea807, type: 3}
       propertyPath: m_AnchoredPosition.y
