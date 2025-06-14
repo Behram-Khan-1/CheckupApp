@@ -84,7 +84,7 @@ public class ChatManager : MonoBehaviour
         {
             chatState = ChatState.WaitingForReply;
             time = initialTime; //Later make send button unclickable when not received reply
-            StartCoroutine(geminiApiClient.SendPrompt(promptBuilder.BuildGoalExtractionPrompt(),
+            StartCoroutine(geminiApiClient.SendPrompt(promptBuilder.BuildPrompt(),
              AddAppMessage,
               DisplayGoals));
             promptBuilder.Reset();
@@ -127,10 +127,13 @@ public class ChatManager : MonoBehaviour
         {
            
             GoalList goalList = JsonUtility.FromJson<GoalList>(jsonResponse);
+            JsonTaskStorage.SaveTasks(JsonUtility.FromJson<GoalList>(jsonResponse));
+            var x = JsonTaskStorage.LoadTasks();
+            
 
-            foreach (Goal goal in goalList.goals)
+            foreach (Goal goal in x.goals)
             {
-                string goalText = $"- {goal.text} [{goal.type}] Priority: {goal.priority}, Streak: {goal.streak}";
+                string goalText = $"- {goal.text}, [{goal.timing}], Priority: {goal.completed}";
                 Debug.Log(goalText);
 
                 // AddAppMessage(goalText);

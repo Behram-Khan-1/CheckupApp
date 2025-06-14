@@ -6,9 +6,11 @@ public class JsonHelper
 {
     public static string CleanMarkdownJson(string raw)
     {
-         return raw
-        .Replace("```json", "")
-        .Replace("```", "")
-        .Trim();
+        return raw
+       .Replace("```json", "")
+       .Replace("```", "")
+       .Trim();
     }
+    
+    
 }
