@@ -16,7 +16,9 @@ public class PromptBuilder
       case PromptType.GetGoals:
         return goalPrompt + " \n " + fullPrompt;
       case PromptType.AskForTiming:
-        return "Based on the following tasks, ask the user when they would like to be reminded or checked in:\n" + fullPrompt;
+        return askTimingPrompt + " \n " + fullPrompt;
+      case PromptType.SetGoalTiming:
+        return timingPrompt + " \n " + fullPrompt;
       case PromptType.AskForCompletion:
         return "The user had the following task: '" + fullPrompt + "'. Ask if they completed it today.";
       case PromptType.MotivationReply:
@@ -44,23 +46,114 @@ public class PromptBuilder
   public void Reset() => fullPrompt = "";
 
 
-  private string goalPrompt = @$"You are a goal-tracking assistant.
-The user has entered a series of messages describing what they want to achieve today or in general. Your job is to extract clear, structured goals from these messages.
-Respond ONLY in this JSON format:
+  private string goalPrompt = @"You are a goal-tracking assistant.
+  The user has entered a series of messages describing what they want to achieve today or in general.
+  Your job is to extract clear, structured goals from these messages.
+  Respond ONLY in this JSON format:
+  
   ""goals"": [
     {{
-      ""text"": ""Workout for 30 minutes""
+      ""text"": ""Detailed goal 1""
+      ""timing"": ""Timing"",
+
+      ""text"": ""Detailed goal 2""
+      ""timing"": ""Timing""
     }},
   ]
-Rules:
-- Only include goals that are actionable or trackable.
-- Try your best to infer priority based on language. Otherwise default to ""medium"", Below is the users message ";
+  Example 1:
+  goals: [
+    {{
+      text: Workout for 30 minute at 7pm
+      timing: 7-7:30 pm,
+
+      text: wake up at 9am
+      timing: 9am
+    }},
+  ]
+
+  Example 2:
+  goals: [
+    {{
+      text: Sleep at 8pm and wakeup at 6am
+      timing: 8pm - 6am,
+
+      text: meditation
+      timing: 7am,
+
+      text: work
+      timing: 9am-1pm
+    }},
+  ]
+  Rules:
+  - Only include goals that are actionable or trackable.
+  - If the user specifies timing (like 'by next week', 'in 2 days', 'this month', 'at 8am'), extract it under timing
+  - If no timing is mentioned, leave timing empty.
+   Below is the users message ";
 
 
-  // public string BuildGoalExtractionPrompt()
-  // {
-  //   return goalPrompt + fullPrompt;
-  // }
+  private string askTimingPrompt = @"
+You are a helpful and supportive goal-tracking assistant.
+The user has already entered some goals, but did not specify when they would like to work on or complete some of them.
+Your job is to ask the user for the timing or deadline of each goal.
+
+Guidelines:
+- If a goal is a task/project, ask when they would like to complete it (today, in 3 days, by next month, at 8pm, etc.)
+- Do not include goals that the user didn’t mention.
+
+Goals:
+";
+
+  private string timingPrompt = @"
+You are a helpful and supportive goal-tracking assistant.
+The user has entered timing of the goals he didnt mention earlier, 
+You have to map each goal to its timing now and then output their responses in the following JSON format:
+Respond ONLY in this JSON format:
+{
+  ""goals"": [
+    {
+      ""text"": ""Workout"",
+      ""timing"": ""Every morning""
+    },
+    {
+      ""text"": ""Apply to a job"",
+      ""timing"": ""By the end of this week""
+    }
+  ]
+}
+
+  Example 1:
+  goals: [
+    {{
+      text: Workout for 30 minute at 7pm
+      timing: 7-7:30 pm,
+
+      text: wake up at 9am
+      timing: 9am
+    }},
+  ]
+
+  Example 2:
+  goals: [
+    {{
+      text: Sleep at 8pm and wakeup at 6am
+      timing: 8pm - 6am,
+
+      text: meditation
+      timing: 7am,
+
+      text: work
+      timing: 9am-1pm
+    }},
+  ]
+  
+Guidelines:
+- If a goal is a task/project, ask when they would like to complete it (today, in 3 days, by next month, at 8pm, etc.)
+- Ensure that the text field exactly matches the goal's original description.
+- Do not include goals that the user didn’t mention.
+
+Goals:
+";
+
 }
 
 

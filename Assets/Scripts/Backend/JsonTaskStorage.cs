@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 public class JsonTaskStorage
@@ -24,6 +25,20 @@ public class JsonTaskStorage
         string json = File.ReadAllText(path);
         return JsonUtility.FromJson<GoalList>(json);
 
+    }
+
+    public static void UpdateTasksTiming(List<Goal> newGoal)
+    {
+        GoalList goalList = LoadTasks();
+        for (int i = 0; i < newGoal.Count; i++)
+        {
+            var match = goalList.goals.FirstOrDefault(g => g.text == newGoal[i].text);
+            if (match != null)
+            {
+                match.timing = newGoal[i].timing;
+            }
+        }
+        SaveTasks(goalList);
     }
 
 

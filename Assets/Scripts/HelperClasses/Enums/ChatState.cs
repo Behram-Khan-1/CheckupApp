@@ -6,3 +6,9 @@ enum ChatState
     WaitingForReply,
     ReplyReceived
 }
+
+enum ChatMode
+{
+    Normal,
+    AwaitingGoalTiming
+}

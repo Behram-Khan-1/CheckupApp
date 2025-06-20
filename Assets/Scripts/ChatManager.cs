@@ -1,7 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System; // For TextMeshPro input and text, if you want nicer text
+using System;
+using System.Collections.Generic; // For TextMeshPro input and text, if you want nicer text
+using System.Linq;
 
 public class ChatManager : MonoBehaviour
 {
@@ -13,8 +15,9 @@ public class ChatManager : MonoBehaviour
     //Timer stuff
     [SerializeField] float initialTime = 3f;
     [SerializeField] private float time;
-
+    //Enums
     [SerializeField] ChatState chatState;
+    [SerializeField] ChatMode chatMode;
 
     // API Portion
     GeminiApiClient geminiApiClient;
@@ -51,6 +54,10 @@ public class ChatManager : MonoBehaviour
             inputField.text = "";
             chatState = ChatState.MessageSent;
 
+            if (chatMode == ChatMode.AwaitingGoalTiming)
+            {
+                SetGoalsTiming(userMessage);
+            }
         }
     }
 
@@ -84,14 +91,94 @@ public class ChatManager : MonoBehaviour
         {
             chatState = ChatState.WaitingForReply;
             time = initialTime; //Later make send button unclickable when not received reply
+
             StartCoroutine(geminiApiClient.SendPrompt(promptBuilder.BuildPrompt(),
              AddAppMessage,
-              DisplayGoals));
+              SaveGoals));
+
+
+
+            Debug.Log("ReplyTimer Prompt Response");
             promptBuilder.Reset();
         }
 
     }
 
+
+
+    public void SaveGoals(string jsonResponse)
+    {
+        try
+        {
+            JsonTaskStorage.SaveTasks(JsonUtility.FromJson<GoalList>(jsonResponse));
+            GoalList goals = JsonTaskStorage.LoadTasks();
+            GoalsNeedingTiming();
+
+            chatState = ChatState.Idle;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("Failed to parse goal JSON: " + ex.Message);
+            AddAppMessage("⚠️ Couldn't understand your goals. Try rephrasing.");
+        }
+    }
+
+    public void GoalsNeedingTiming()
+    {
+
+        GoalList goalList = JsonTaskStorage.LoadTasks();
+        List<Goal> goalsNeedingTiming = goalList.goals.Where(g => string.IsNullOrEmpty(g.timing)).ToList();
+
+        if (goalsNeedingTiming.Count <= 0)
+        {
+            Debug.Log("No goals need timing ");
+            return;
+        }
+        promptBuilder.SetPromptType(PromptType.AskForTiming);
+        chatMode = ChatMode.AwaitingGoalTiming;
+
+        // foreach (Goal goal in goalsNeedingTiming)
+        // {
+        //     string goalText = $"- {goal.text}, [{goal.timing}]";
+        //     Debug.Log(goalText);
+        // }
+
+        promptBuilder.Reset();
+        foreach (Goal goal in goalsNeedingTiming)
+        {
+            promptBuilder.Append(goal.text);
+        }
+
+        StartCoroutine(geminiApiClient.SendPrompt(promptBuilder.BuildPrompt(), AddAppMessage));
+
+    }
+
+    public void SetGoalsTiming(string userMessage)
+    {
+        promptBuilder.SetPromptType(PromptType.SetGoalTiming);
+
+        GoalList goalList = JsonTaskStorage.LoadTasks();
+        List<Goal> goalsNeedingTiming = goalList.goals.Where(g => string.IsNullOrEmpty(g.timing)).ToList();
+
+        if (goalsNeedingTiming.Count <= 0)
+        {
+            Debug.Log("No goals need timing ");
+            return;
+        }
+        promptBuilder.Reset();
+
+        foreach (Goal goal in goalsNeedingTiming)
+        {
+            promptBuilder.Append(goal.text);
+        }
+        promptBuilder.Append("User Timing Response " + userMessage);
+
+        StartCoroutine(geminiApiClient.SendPrompt(promptBuilder.BuildPrompt(), AddAppMessage, UpdateGoaltiming));
+        chatMode = ChatMode.Normal;
+        chatState = ChatState.Idle;
+    }
+
+    #region Helpers
     /// <summary>
     /// Called when the input field value changes. Sets the isTyping flag based on whether
     /// the input field has text. If the input field is empty and a message has been sent,
@@ -121,32 +208,29 @@ public class ChatManager : MonoBehaviour
         }
     }
 
-    public void DisplayGoals(string jsonResponse)
+    // public void ClearChat()
+    // {
+    //     foreach (Transform child in chatContent)
+    //     {
+    //         GameObject.Destroy(child.gameObject);
+    //     }
+    // }
+
+    public void UpdateGoaltiming(string jsonResponse)
     {
-        try
-        {
-           
-            GoalList goalList = JsonUtility.FromJson<GoalList>(jsonResponse);
-            JsonTaskStorage.SaveTasks(JsonUtility.FromJson<GoalList>(jsonResponse));
-            var x = JsonTaskStorage.LoadTasks();
-            
+        GoalList goalList = JsonTaskStorage.LoadTasks();
+        List<Goal> goalsNeedingTiming = goalList.goals.Where(g => string.IsNullOrEmpty(g.timing)).ToList();
 
-            foreach (Goal goal in x.goals)
-            {
-                string goalText = $"- {goal.text}, [{goal.timing}], Priority: {goal.completed}";
-                Debug.Log(goalText);
+        var response = JsonUtility.FromJson<GoalList>(jsonResponse);
 
-                // AddAppMessage(goalText);
-            }
-                chatState = ChatState.Idle;
-        }
-        catch (Exception ex)
+
+        foreach (Goal goal in goalsNeedingTiming)
         {
-            Debug.LogError("Failed to parse goal JSON: " + ex.Message);
-            AddAppMessage("⚠️ Couldn't understand your goals. Try rephrasing.");
+            goal.timing = response.goals.Find(g => g.text == goal.text).timing;
         }
+
+        JsonTaskStorage.UpdateTasksTiming(goalsNeedingTiming);
+
     }
-
-
-
+    #endregion
 }
