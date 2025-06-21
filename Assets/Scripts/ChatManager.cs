@@ -23,15 +23,19 @@ public class ChatManager : MonoBehaviour
     GeminiApiClient geminiApiClient;
 
     //Prompt Stuff
-
     PromptBuilder promptBuilder;
+    //GoalTimnigManager
+    GoalTimingManager goalTimingManager;
 
     void Start()
     {
+
         geminiApiClient = gameObject.AddComponent<GeminiApiClient>();
         promptBuilder = new PromptBuilder();
         time = initialTime;
         inputField.onValueChanged.AddListener(OnValueChanged);
+
+        goalTimingManager = new GoalTimingManager(this, geminiApiClient);
 
     }
 
@@ -56,21 +60,21 @@ public class ChatManager : MonoBehaviour
 
             if (chatMode == ChatMode.AwaitingGoalTiming)
             {
-                SetGoalsTiming(userMessage);
+                goalTimingManager.SetGoalsTiming(userMessage);
             }
         }
     }
 
 
 
-    void AddUserMessage(string message)
+    public void AddUserMessage(string message)
     {
         GameObject bubble = Instantiate(userBubblePrefab, chatContent);
         bubble.transform.SetAsLastSibling();
         bubble.GetComponentInChildren<TMP_Text>().text = message;
     }
 
-    void AddAppMessage(string message)
+    public void AddAppMessage(string message)
     {
         GameObject bubble = Instantiate(appBubblePrefab, chatContent);
         bubble.transform.SetAsLastSibling();
@@ -92,7 +96,7 @@ public class ChatManager : MonoBehaviour
             chatState = ChatState.WaitingForReply;
             time = initialTime; //Later make send button unclickable when not received reply
 
-            StartCoroutine(geminiApiClient.SendPrompt(promptBuilder.BuildPrompt(),
+            StartCoroutine(geminiApiClient.SendPromptCoroutine(promptBuilder.BuildPrompt(),
              AddAppMessage,
               SaveGoals));
 
@@ -112,7 +116,7 @@ public class ChatManager : MonoBehaviour
         {
             JsonTaskStorage.SaveTasks(JsonUtility.FromJson<GoalList>(jsonResponse));
             GoalList goals = JsonTaskStorage.LoadTasks();
-            GoalsNeedingTiming();
+            goalTimingManager.GoalsNeedingTiming();
 
             chatState = ChatState.Idle;
         }
@@ -123,60 +127,8 @@ public class ChatManager : MonoBehaviour
         }
     }
 
-    public void GoalsNeedingTiming()
-    {
 
-        GoalList goalList = JsonTaskStorage.LoadTasks();
-        List<Goal> goalsNeedingTiming = goalList.goals.Where(g => string.IsNullOrEmpty(g.timing)).ToList();
 
-        if (goalsNeedingTiming.Count <= 0)
-        {
-            Debug.Log("No goals need timing ");
-            return;
-        }
-        promptBuilder.SetPromptType(PromptType.AskForTiming);
-        chatMode = ChatMode.AwaitingGoalTiming;
-
-        // foreach (Goal goal in goalsNeedingTiming)
-        // {
-        //     string goalText = $"- {goal.text}, [{goal.timing}]";
-        //     Debug.Log(goalText);
-        // }
-
-        promptBuilder.Reset();
-        foreach (Goal goal in goalsNeedingTiming)
-        {
-            promptBuilder.Append(goal.text);
-        }
-
-        StartCoroutine(geminiApiClient.SendPrompt(promptBuilder.BuildPrompt(), AddAppMessage));
-
-    }
-
-    public void SetGoalsTiming(string userMessage)
-    {
-        promptBuilder.SetPromptType(PromptType.SetGoalTiming);
-
-        GoalList goalList = JsonTaskStorage.LoadTasks();
-        List<Goal> goalsNeedingTiming = goalList.goals.Where(g => string.IsNullOrEmpty(g.timing)).ToList();
-
-        if (goalsNeedingTiming.Count <= 0)
-        {
-            Debug.Log("No goals need timing ");
-            return;
-        }
-        promptBuilder.Reset();
-
-        foreach (Goal goal in goalsNeedingTiming)
-        {
-            promptBuilder.Append(goal.text);
-        }
-        promptBuilder.Append("User Timing Response " + userMessage);
-
-        StartCoroutine(geminiApiClient.SendPrompt(promptBuilder.BuildPrompt(), AddAppMessage, UpdateGoaltiming));
-        chatMode = ChatMode.Normal;
-        chatState = ChatState.Idle;
-    }
 
     #region Helpers
     /// <summary>
@@ -206,6 +158,8 @@ public class ChatManager : MonoBehaviour
 
             return time;
         }
+
+
     }
 
     // public void ClearChat()
@@ -223,14 +177,36 @@ public class ChatManager : MonoBehaviour
 
         var response = JsonUtility.FromJson<GoalList>(jsonResponse);
 
-
-        foreach (Goal goal in goalsNeedingTiming)
+        foreach (Goal goal in response.goals)
         {
-            goal.timing = response.goals.Find(g => g.text == goal.text).timing;
+            var goalToUpdate = goalsNeedingTiming.Find(g => g.text == goal.text);
+            if (goalToUpdate != null)
+            {
+                goalToUpdate.timing = goal.timing;
+            }
         }
 
         JsonTaskStorage.UpdateTasksTiming(goalsNeedingTiming);
+        goalTimingManager.GoalsNeedingTiming();
 
+    }
+
+    public void SetChatMode(ChatMode chatMode)
+    {
+        this.chatMode = chatMode;
+    }
+    public ChatMode GetChatMode()
+    {
+        return chatMode;
+    }
+    
+    public ChatState GetChatState()
+    {
+        return chatState;
+    }
+    public void SetChatState(ChatState chatState)
+    {
+        this.chatState = chatState;
     }
     #endregion
 }

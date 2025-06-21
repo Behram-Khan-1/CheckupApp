@@ -1,4 +1,4 @@
-enum ChatState
+public enum ChatState
 {
     Idle,
     Typing,
@@ -7,7 +7,7 @@ enum ChatState
     ReplyReceived
 }
 
-enum ChatMode
+public enum ChatMode
 {
     Normal,
     AwaitingGoalTiming

@@ -9,7 +9,13 @@ public class GeminiApiClient : MonoBehaviour
     private const string apiKey = "AIzaSyDcJCyS3nAuBUrmLPzgKQAbGM-T3WZGh_Y";
     private string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=";
 
-    public IEnumerator SendPrompt(string prompt, Action<string> response, Action<string> onJsonReply = null)
+    public void SendPrompt(string prompt, Action<string> onTextResponse, Action<string> onJsonReply = null)
+    {
+        StartCoroutine(SendPromptCoroutine(prompt, onTextResponse, onJsonReply));
+    }
+
+
+    public IEnumerator SendPromptCoroutine(string prompt, Action<string> response, Action<string> onJsonReply = null)
     {
         var request = new GeminiRequest
         {

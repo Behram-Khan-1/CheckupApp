@@ -625,7 +625,7 @@ MonoBehaviour:
   userBubblePrefab: {fileID: 1937703228033982381, guid: e788b2b90128d644cbadf1d8c996d9cd, type: 3}
   appBubblePrefab: {fileID: 4229866981938729909, guid: a3d9296f49ac2664a9b5bddbec5ea807, type: 3}
   inputField: {fileID: 1391721744}
-  initialTime: 3
+  initialTime: 1
   time: 0
   chatState: 0
   chatMode: 0
