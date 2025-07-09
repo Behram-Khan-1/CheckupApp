@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "788470788999",
+    "project_id": "cruddemo-fddd8",
+    "storage_bucket": "cruddemo-fddd8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:788470788999:android:4d342b7bb1af7c8a179922",
+        "android_client_info": {
+          "package_name": "com.BehramKhan.SelfCheckApp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAVD5WyL9HMxCsTwTMJspC1dl6Gas_4Wog"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

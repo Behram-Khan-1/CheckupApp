@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 
 public class GeminiApiClient : MonoBehaviour
-{
+{ 
     private const string apiKey = "AIzaSyDcJCyS3nAuBUrmLPzgKQAbGM-T3WZGh_Y";
     private string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=";
 

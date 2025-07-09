@@ -27,6 +27,8 @@ public class ChatManager : MonoBehaviour
     //GoalTimnigManager
     GoalTimingManager goalTimingManager;
 
+    [SerializeField] private DatabaseManager databaseManager;
+
     void Start()
     {
 
@@ -114,8 +116,11 @@ public class ChatManager : MonoBehaviour
     {
         try
         {
-            JsonTaskStorage.SaveTasks(JsonUtility.FromJson<GoalList>(jsonResponse));
-            GoalList goals = JsonTaskStorage.LoadTasks();
+            databaseManager.SaveGoalsToFirebase(JsonUtility.FromJson<GoalList>(jsonResponse));
+            Debug.Log("Goals saved to Firebase successfully!");
+
+            // JsonTaskStorage.SaveTasks(JsonUtility.FromJson<GoalList>(jsonResponse));
+            // GoalList goals = JsonTaskStorage.LoadTasks();
             goalTimingManager.GoalsNeedingTiming();
 
             chatState = ChatState.Idle;

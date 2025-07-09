@@ -10,6 +10,8 @@ public class JsonTaskStorage
 
     public static void SaveTasks(GoalList goalList)
     {
+        
+
         Debug.Log("Saving tasks");
         string json = JsonUtility.ToJson(goalList, true);
         File.WriteAllText(path, json);
