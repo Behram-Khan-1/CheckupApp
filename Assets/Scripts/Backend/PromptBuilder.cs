@@ -1,6 +1,6 @@
 using System;
 using System.Diagnostics;
-public class PromptBuilder 
+public class PromptBuilder
 {
 
   PromptType currentPrompt = PromptType.GetGoals;
@@ -51,15 +51,20 @@ public class PromptBuilder
   Your job is to extract clear, structured goals from these messages.
   Respond ONLY in this JSON format:
   
+  Respond ONLY in this JSON format:
+{
   ""goals"": [
-    {{
-      ""text"": ""Detailed goal 1""
-      ""timing"": ""Timing"",
-
-      ""text"": ""Detailed goal 2""
+    {
+      ""text"": ""Detailed goal 1"",
       ""timing"": ""Timing""
-    }},
+    },
+    {
+      ""text"": ""Detailed goal 2"",
+      ""timing"": ""Timing""
+    }
   ]
+}
+
   Example 1:
   goals: [
     {{

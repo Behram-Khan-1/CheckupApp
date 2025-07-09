@@ -5,35 +5,41 @@ using UnityEngine;
 
 public class GoalTimingManager
 {
-    private ChatManager chatManager;
+    public ChatStateController chatStateController;
+    public ChatUIManager chatUIManager;
     private GeminiApiClient geminiApiClient;
-    private PromptBuilder promptBuilder = new PromptBuilder();
-    public GoalTimingManager(ChatManager chatManager, GeminiApiClient geminiApiClient)
+    private PromptBuilder promptBuilder;
+    public GoalTimingManager(ChatStateController chatStateController,
+     GeminiApiClient geminiApiClient,
+     ChatUIManager chatUIManager)
     {
-        this.chatManager = chatManager;
+        this.chatStateController = chatStateController;
+        this.chatUIManager = chatUIManager;
         this.geminiApiClient = geminiApiClient;
-    }
 
+        promptBuilder = PromptService.Instance.promptBuilder;
+    }
     public void GoalsNeedingTiming()
     {
-
-        GoalList goalList = JsonTaskStorage.LoadTasks();
-        List<Goal> goalsNeedingTiming = goalList.goals.Where(g => string.IsNullOrEmpty(g.timing)).ToList();
-
-        if (goalsNeedingTiming.Count <= 0)
+        DatabaseManager.Instance.LoadGoalsFromFirebase(goalList =>
         {
-            Debug.Log("No goals need timing ");
-            return;
-        }
-        promptBuilder.SetPromptType(PromptType.AskForTiming);
-        chatManager.SetChatMode(ChatMode.AwaitingGoalTiming);
-        promptBuilder.Reset();
-        foreach (Goal goal in goalsNeedingTiming)
-        {
-            promptBuilder.Append(goal.text);
-        }
-        Debug.Log("GoalNeedTiming" + promptBuilder.GetPrompt());
-        geminiApiClient.SendPrompt(promptBuilder.BuildPrompt(), chatManager.AddAppMessage);
+            List<Goal> goalsNeedingTiming = goalList.goals.Where(g => string.IsNullOrEmpty(g.timing)).ToList();
+
+            if (goalsNeedingTiming.Count <= 0)
+            {
+                Debug.Log("No goals need timing ");
+                return;
+            }
+            promptBuilder.SetPromptType(PromptType.AskForTiming);
+            chatStateController.SetChatMode(ChatMode.AwaitingGoalTiming);
+            promptBuilder.Reset();
+            foreach (Goal goal in goalsNeedingTiming)
+            {
+                promptBuilder.Append(goal.text);
+            }
+            Debug.Log("GoalNeedTiming" + promptBuilder.GetPrompt());
+            geminiApiClient.SendPrompt(promptBuilder.BuildPrompt(), chatUIManager.AddAppMessage);
+        });
 
     }
 
@@ -41,25 +47,38 @@ public class GoalTimingManager
     {
         promptBuilder.SetPromptType(PromptType.SetGoalTiming);
 
-        GoalList goalList = JsonTaskStorage.LoadTasks();
-        List<Goal> goalsNeedingTiming = goalList.goals.Where(g => string.IsNullOrEmpty(g.timing)).ToList();
-
-        if (goalsNeedingTiming.Count <= 0)
+        DatabaseManager.Instance.LoadGoalsFromFirebase(goalList =>
         {
-            Debug.Log("No goals need timing ");
-            return;
-        }
-        promptBuilder.Reset();
+            List<Goal> goalsNeedingTiming = goalList.goals.Where(g => string.IsNullOrEmpty(g.timing)).ToList();
 
-        foreach (Goal goal in goalsNeedingTiming)
-        {
-            promptBuilder.Append(goal.text);
-        }
-        promptBuilder.Append("User Timing Response " + userMessage);
+            if (goalsNeedingTiming.Count <= 0)
+            {
+                Debug.Log("No goals need timing ");
+                return;
+            }
+            promptBuilder.Reset();
 
-        Debug.Log("SetGoalTiming");
-        geminiApiClient.SendPrompt(promptBuilder.BuildPrompt(), chatManager.AddAppMessage, chatManager.UpdateGoaltiming);
-        chatManager.SetChatMode(ChatMode.Normal);    
-        chatManager.SetChatState(ChatState.Idle);
+            foreach (Goal goal in goalsNeedingTiming)
+            {
+                promptBuilder.Append(goal.text);
+            }
+            promptBuilder.Append("User Timing Response " + userMessage);
+
+            Debug.Log("SetGoalTiming");
+            geminiApiClient.SendPrompt(promptBuilder.BuildPrompt(),
+             chatUIManager.AddAppMessage,
+            UpdateGoaltiming);
+
+            chatStateController.SetChatMode(ChatMode.Normal);
+            chatStateController.SetChatState(ChatState.Idle);
+        });
     }
+
+    public void UpdateGoaltiming(string jsonResponse)
+    {
+        var response = JsonUtility.FromJson<GoalList>(jsonResponse);
+        DatabaseManager.Instance.UpdateGoalsTiming(response.goals);
+        GoalsNeedingTiming();
+    }
+
 }

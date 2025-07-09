@@ -52,6 +52,7 @@ public class GeminiApiClient : MonoBehaviour
             // If caller wants JSON processing
             if (onJsonReply != null)
             {
+                Debug.Log("Raw Gemini reply:\n" + reply);
                 onJsonReply.Invoke(reply);
             }
         }

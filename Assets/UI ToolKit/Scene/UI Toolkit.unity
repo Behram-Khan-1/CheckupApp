@@ -437,6 +437,97 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Padding: {x: -8, y: -5, z: -8, w: -5}
   m_Softness: {x: 0, y: 0}
+--- !u!1 &1102954052
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1102954056}
+  - component: {fileID: 1102954055}
+  - component: {fileID: 1102954054}
+  - component: {fileID: 1102954053}
+  - component: {fileID: 1102954057}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1102954053
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1102954052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 528fa640cb5912c43b3a3dbcc2f521c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  chatContent: {fileID: 1429945237}
+  userBubblePrefab: {fileID: 1937703228033982381, guid: e788b2b90128d644cbadf1d8c996d9cd, type: 3}
+  appBubblePrefab: {fileID: 4229866981938729909, guid: a3d9296f49ac2664a9b5bddbec5ea807, type: 3}
+--- !u!114 &1102954054
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1102954052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90f51f591f2d7e14daf17b2018d8fd75, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  chatState: 0
+  chatMode: 0
+--- !u!114 &1102954055
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1102954052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3edc3b9f7a0eac84a990f9b843a50704, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  inputField: {fileID: 1391721744}
+  chatUIManager: {fileID: 1102954053}
+  chatStateController: {fileID: 1102954054}
+--- !u!4 &1102954056
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1102954052}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 505.96268, y: 943.72473, z: -0.54911685}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1102954057
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1102954052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c6a7d4d05a7f264ba7b12bb68b62ed9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1211766882
 GameObject:
   m_ObjectHideFlags: 0
@@ -621,14 +712,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa89a7901ecc48d4ca65e315e40bfcf3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  chatContent: {fileID: 1429945237}
-  userBubblePrefab: {fileID: 1937703228033982381, guid: e788b2b90128d644cbadf1d8c996d9cd, type: 3}
-  appBubblePrefab: {fileID: 4229866981938729909, guid: a3d9296f49ac2664a9b5bddbec5ea807, type: 3}
-  inputField: {fileID: 1391721744}
-  initialTime: 1
+  initialTime: 2
   time: 0
-  chatState: 0
-  chatMode: 0
+  databaseManager: {fileID: 2050913235}
+  chatUIManager: {fileID: 1102954053}
+  chatStateController: {fileID: 1102954054}
 --- !u!4 &1228158928
 Transform:
   m_ObjectHideFlags: 0
@@ -1572,8 +1660,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1228158927}
-        m_TargetAssemblyTypeName: ChatManager, Assembly-CSharp
+      - m_Target: {fileID: 1102954055}
+        m_TargetAssemblyTypeName: ChatInputManager, Assembly-CSharp
         m_MethodName: OnSendButtonClicked
         m_Mode: 1
         m_Arguments:
@@ -1622,6 +1710,50 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1933579499}
   m_CullTransparentMesh: 1
+--- !u!1 &2050913234
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2050913236}
+  - component: {fileID: 2050913235}
+  m_Layer: 0
+  m_Name: DatabaseManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2050913235
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2050913234}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c98b161a0f95b5949b4142060206534d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &2050913236
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2050913234}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 519.1641, y: 762.1175, z: 0.13616192}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1631901326397358019
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1951,4 +2083,6 @@ SceneRoots:
   - {fileID: 1412021178}
   - {fileID: 1689508083}
   - {fileID: 1276418507}
+  - {fileID: 2050913236}
   - {fileID: 1228158928}
+  - {fileID: 1102954056}

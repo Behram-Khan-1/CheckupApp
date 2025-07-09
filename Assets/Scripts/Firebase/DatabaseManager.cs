@@ -1,45 +1,162 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
-using UnityEngine;
+using System.Threading.Tasks;
 using Firebase;
-using Firebase.Database;
 using Firebase.Extensions;
+using Firebase.Firestore;
+using UnityEngine;
 
 public class DatabaseManager : MonoBehaviour
 {
-    private DatabaseReference dbReference;
+    public static DatabaseManager Instance;
+    private FirebaseFirestore firestore;
+
+    private string userId = "testUser"; // Replace with actual user ID when Auth is added
+
+    void Awake()
+    {
+        if (Instance == null)
+            Instance = this;
+    }
 
     void Start()
     {
         FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task =>
         {
-            var dependencyStatus = task.Result;
-            if (dependencyStatus == DependencyStatus.Available)
+            if (task.Result == DependencyStatus.Available)
             {
-                dbReference = FirebaseDatabase.DefaultInstance.RootReference;
-                Debug.Log("Firebase initialized!");
+                firestore = FirebaseFirestore.DefaultInstance;
+                Debug.Log("✅ Firestore initialized!");
             }
             else
             {
-                Debug.LogError($"Could not resolve all Firebase dependencies: {dependencyStatus}");
+                Debug.LogError("❌ Firebase dependency issue: " + task.Result);
             }
         });
     }
 
-    // Call this to save goals to Firebase
+    // ✅ Save Goals
     public void SaveGoalsToFirebase(GoalList goalList)
     {
-        string json = JsonUtility.ToJson(goalList);
-        dbReference.Child("goals").SetRawJsonValueAsync(json).ContinueWithOnMainThread(task =>
+        CollectionReference userGoalsRef = firestore.Collection("users").Document(userId).Collection("goals");
+
+        // Delete previous goals first to avoid duplicates
+        DeleteAllUserGoals(() =>
         {
-            if (task.IsCompleted)
+            foreach (Goal goal in goalList.goals)
             {
-                Debug.Log("Goals saved to Firebase!");
-            }
-            else
-            {
-                Debug.LogError("Failed to save goals to Firebase: " + task.Exception);
+                Dictionary<string, object> goalData = new Dictionary<string, object>
+                {
+                    { "text", goal.text },
+                    { "timing", goal.timing },
+                    { "time", goal.time },
+                    { "completed", goal.completed }
+                };
+
+                userGoalsRef.AddAsync(goalData).ContinueWithOnMainThread(task =>
+                {
+                    if (task.IsCompleted)
+                        Debug.Log("✅ Goal saved: " + goal.text);
+                    else
+                        Debug.LogError("❌ Error saving goal: " + task.Exception);
+                });
             }
         });
+    }
+
+    // ✅ Load Goals
+    public void LoadGoalsFromFirebase(Action<GoalList> onLoaded)
+    {
+        firestore.Collection("users").Document(userId).Collection("goals")
+            .GetSnapshotAsync()
+            .ContinueWithOnMainThread(task =>
+            {
+                if (task.IsFaulted || task.IsCanceled)
+                {
+                    Debug.LogError("❌ Failed to load goals: " + task.Exception);
+                    onLoaded?.Invoke(new GoalList { goals = new List<Goal>() });
+                    return;
+                }
+
+                List<Goal> loadedGoals = new List<Goal>();
+                foreach (DocumentSnapshot doc in task.Result.Documents)
+                {
+                    Dictionary<string, object> data = doc.ToDictionary();
+
+                    Goal goal = new Goal
+                    {
+                        text = data["text"] as string,
+                        timing = data.ContainsKey("timing") ? data["timing"] as string : "",
+                        time = data.ContainsKey("time") ? data["time"] as string : DateTime.Now.ToString("h:mmtt dd MMMM dddd yyyy"),
+                        completed = data.ContainsKey("completed") && (bool)data["completed"]
+                    };
+
+                    loadedGoals.Add(goal);
+                }
+
+                onLoaded?.Invoke(new GoalList { goals = loadedGoals });
+            });
+    }
+
+    // ✅ Update Goal Timing
+    public void UpdateGoalsTiming(List<Goal> updatedGoals)
+    {
+        firestore.Collection("users").Document(userId).Collection("goals")
+            .GetSnapshotAsync()
+            .ContinueWithOnMainThread(task =>
+            {
+                if (task.IsFaulted || task.IsCanceled)
+                {
+                    Debug.LogError("❌ Failed to update goals: " + task.Exception);
+                    return;
+                }
+
+                foreach (DocumentSnapshot doc in task.Result.Documents)
+                {
+                    string goalText = doc.ContainsField("text") ? doc.GetValue<string>("text") : null;
+                    var match = updatedGoals.Find(g => g.text == goalText);
+
+                    if (match != null)
+                    {
+                        DocumentReference docRef = doc.Reference;
+                        Dictionary<string, object> updates = new Dictionary<string, object>
+                        {
+                            { "timing", match.timing }
+                        };
+
+                        docRef.UpdateAsync(updates).ContinueWithOnMainThread(updateTask =>
+                        {
+                            if (updateTask.IsCompleted)
+                                Debug.Log("✅ Timing updated for: " + goalText);
+                            else
+                                Debug.LogError("❌ Failed to update timing: " + updateTask.Exception);
+                        });
+                    }
+                }
+            });
+    }
+
+    // 🔄 Optional Helper: Delete all goals (to avoid duplicates)
+    private void DeleteAllUserGoals(Action onDeleted)
+    {
+        firestore.Collection("users").Document(userId).Collection("goals")
+            .GetSnapshotAsync()
+            .ContinueWithOnMainThread(task =>
+            {
+                if (task.IsFaulted || task.IsCanceled)
+                {
+                    Debug.LogWarning("⚠️ Could not clear old goals.");
+                    onDeleted?.Invoke();
+                    return;
+                }
+
+                var deleteTasks = new List<Task>();
+                foreach (var doc in task.Result.Documents)
+                {
+                    deleteTasks.Add(doc.Reference.DeleteAsync());
+                }
+
+                Task.WhenAll(deleteTasks).ContinueWithOnMainThread(_ => onDeleted?.Invoke());
+            });
     }
 }
