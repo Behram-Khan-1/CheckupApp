@@ -1,0 +1,19 @@
+# Setting Up Notification Sounds
+
+To add notification sounds for goal reminders:
+
+1. Create a `Resources` folder in your Unity project if it doesn't exist
+2. Create a `Sounds` folder inside the `Resources` folder
+3. Add an audio file named `notification.mp3` (or other supported format) to the `Sounds` folder
+4. The system will automatically load this sound for notifications
+
+Example folder structure:
+```
+Assets/
+  Resources/
+    Sounds/
+      notification.mp3
+```
+
+The ChatManager script will automatically try to load this sound file for goal reminders.
+If the file is not found, a warning will be logged in the console, but the system will continue to function without sound notifications.

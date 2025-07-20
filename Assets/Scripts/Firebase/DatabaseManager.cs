@@ -136,6 +136,49 @@ public class DatabaseManager : MonoBehaviour
             });
     }
 
+    // ✅ Mark Goal as Completed
+    public void MarkGoalAsCompleted(string goalText, bool isCompleted = true)
+    {
+        firestore.Collection("users").Document(userId).Collection("goals")
+            .WhereEqualTo("text", goalText)
+            .GetSnapshotAsync()
+            .ContinueWithOnMainThread(task =>
+            {
+                if (task.IsFaulted || task.IsCanceled)
+                {
+                    Debug.LogError("❌ Failed to find goal: " + task.Exception);
+                    return;
+                }
+
+                QuerySnapshot querySnapshot = task.Result;
+
+                if (querySnapshot == null || querySnapshot.Count == 0)
+                {
+                    Debug.LogWarning("⚠️ Goal not found: " + goalText);
+                    return;
+                }
+
+                foreach (DocumentSnapshot doc in querySnapshot.Documents)
+                {
+                    DocumentReference docRef = doc.Reference;
+
+                    Dictionary<string, object> updates = new Dictionary<string, object>
+                    {
+                    { "completed", isCompleted }
+                    };
+
+                    docRef.UpdateAsync(updates).ContinueWithOnMainThread(updateTask =>
+                    {
+                        if (updateTask.IsCompleted)
+                            Debug.Log("✅ Goal marked as " + (isCompleted ? "completed" : "incomplete") + ": " + goalText);
+                        else
+                            Debug.LogError("❌ Failed to update goal: " + updateTask.Exception);
+                    });
+                }
+            });
+    }
+
+
     // 🔄 Optional Helper: Delete all goals (to avoid duplicates)
     private void DeleteAllUserGoals(Action onDeleted)
     {

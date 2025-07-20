@@ -25,14 +25,35 @@ public class ChatManager : MonoBehaviour
 
     void Start()
     {
-
         geminiApiClient = gameObject.AddComponent<GeminiApiClient>();
 
         time = initialTime;
         goalTimingManager = new GoalTimingManager(chatStateController, geminiApiClient, chatUIManager);
         
         promptBuilder = PromptService.Instance.promptBuilder;
-
+        
+        // Ensure GoalReminderManager is attached
+        GoalReminderManager reminderManager = GetComponent<GoalReminderManager>();
+        if (reminderManager == null)
+        {
+            reminderManager = gameObject.AddComponent<GoalReminderManager>();
+        }
+        
+        // Add AudioSource for notification sounds if not present
+        AudioSource audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.volume = 0.7f;
+            
+            // Try to load a notification sound
+            audioSource.clip = Resources.Load<AudioClip>("Sounds/notification");
+            if (audioSource.clip == null)
+            {
+                Debug.LogWarning("Notification sound not found in Resources/Sounds/notification. Please add a sound file.");
+            }
+        }
     }
 
     void Update()
