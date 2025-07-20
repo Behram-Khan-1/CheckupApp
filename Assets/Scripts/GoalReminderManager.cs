@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using UnityEngine;
 
 public class GoalReminderManager : MonoBehaviour
@@ -10,7 +11,11 @@ public class GoalReminderManager : MonoBehaviour
     private float timer;
     private DatabaseManager databaseManager;
     private ChatUIManager chatUIManager;
-
+    
+    // For day change detection
+    private string currentDate;
+    private bool hasCheckedYesterdaysGoals = false;
+    
     void Start()
     {
         timer = checkInterval;
@@ -27,9 +32,15 @@ public class GoalReminderManager : MonoBehaviour
             Debug.LogError("GoalReminderManager requires a ChatUIManager in the scene");
         }
         
+        // Initialize current date
+        currentDate = DateTime.Now.ToString("yyyy-MM-dd");
+        
         // Show welcome message and today's goals after a short delay
         Invoke("ShowWelcomeMessage", 1f);
         Invoke("ShowTodaysGoals", 2f);
+        
+        // Check if we need to handle day transition
+        CheckForDayChange();
     }
     
     private void ShowWelcomeMessage()
@@ -47,7 +58,62 @@ public class GoalReminderManager : MonoBehaviour
         if (timer <= 0)
         {
             CheckGoalReminders();
+            CheckForDayChange();
             timer = checkInterval;
+        }
+    }
+    
+    // Check if the day has changed and handle goal transitions
+    private void CheckForDayChange()
+    {
+        string todayDate = DateTime.Now.ToString("yyyy-MM-dd");
+        
+        // Check if it's a new day
+        if (todayDate != currentDate)
+        {
+            Debug.Log("Day changed from " + currentDate + " to " + todayDate);
+            
+            // Update the current date
+            string yesterdayDate = currentDate;
+            currentDate = todayDate;
+            
+            // Reset the flag for checking yesterday's goals
+            hasCheckedYesterdaysGoals = false;
+            
+            // Check if it's morning (between 5 AM and 10 AM)
+            int currentHour = DateTime.Now.Hour;
+            if (currentHour >= 5 && currentHour <= 10 && !hasCheckedYesterdaysGoals)
+            {
+                // Ask about yesterday's goals during morning hours
+                AskAboutYesterdaysGoals(yesterdayDate);
+            }
+            // If it's after 10 AM, just mark as checked without asking
+            else if (currentHour > 10)
+            {
+                hasCheckedYesterdaysGoals = true;
+            }
+            
+            // Show today's goals after a day change
+            Invoke("ShowTodaysGoals", 2f);
+        }
+        // If it's a new day but we haven't checked yesterday's goals yet
+        else if (!hasCheckedYesterdaysGoals)
+        {
+            // Calculate yesterday's date
+            string yesterdayDate = DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd");
+            
+            // Check if it's morning (between 5 AM and 10 AM)
+            int currentHour = DateTime.Now.Hour;
+            if (currentHour >= 5 && currentHour <= 10)
+            {
+                // Ask about yesterday's goals during morning hours
+                AskAboutYesterdaysGoals(yesterdayDate);
+            }
+            // If it's after 10 AM, just mark as checked without asking
+            else if (currentHour > 10)
+            {
+                hasCheckedYesterdaysGoals = true;
+            }
         }
     }
     
@@ -146,6 +212,138 @@ public class GoalReminderManager : MonoBehaviour
         return false;
     }
     
+    // Ask about yesterday's incomplete goals
+    private void AskAboutYesterdaysGoals(string yesterdayDate)
+    {
+        // Mark that we've checked yesterday's goals
+        hasCheckedYesterdaysGoals = true;
+        
+        // Load goals from yesterday
+        DatabaseManager.Instance.LoadGoalsForDate(yesterdayDate, goalList =>
+        {
+            // Filter for incomplete goals
+            List<Goal> incompleteGoals = goalList.goals.Where(g => !g.completed).ToList();
+            
+            if (incompleteGoals.Count == 0)
+            {
+                // No incomplete goals from yesterday
+                string greeting2 = GetTimeBasedGreeting();
+                chatUIManager.AddAppMessage($"{greeting2} You completed all your goals yesterday. 🎉 Would you like to set new goals for today?");
+                return;
+            }
+            
+            // Ask about incomplete goals
+            string greeting = GetTimeBasedGreeting();
+            string message = $"{greeting} You have {incompleteGoals.Count} incomplete goal{(incompleteGoals.Count > 1 ? "s" : "")} from yesterday:\n";
+            
+            foreach (Goal goal in incompleteGoals)
+            {
+                // Include timing information if available
+                string timingInfo = string.IsNullOrEmpty(goal.timing) ? "" : $" ({goal.timing})";
+                message += $"• {goal.text}{timingInfo}\n";
+            }
+            
+            message += "\nWould you like to move these to today's goals? (Reply with 'yes' or 'no')";
+            
+            chatUIManager.AddAppMessage(message);
+            
+            // Store incomplete goals for later use
+            _pendingIncompleteGoals = incompleteGoals;
+            
+            // Set the flag in ChatInputManager to wait for a response
+            ChatInputManager chatInputManager = FindObjectOfType<ChatInputManager>();
+            if (chatInputManager != null)
+            {
+                // Use reflection to set the private field
+                System.Reflection.FieldInfo fieldInfo = chatInputManager.GetType().GetField("waitingForMoveGoalsResponse", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                
+                if (fieldInfo != null)
+                {
+                    fieldInfo.SetValue(chatInputManager, true);
+                }
+                else
+                {
+                    Debug.LogError("Could not find waitingForMoveGoalsResponse field in ChatInputManager");
+                }
+            }
+        });
+    }
+    
+    // Get a greeting based on the time of day
+     private string GetTimeBasedGreeting()
+     {
+         int hour = DateTime.Now.Hour;
+         
+         if (hour >= 5 && hour < 12)
+         {
+             return "Good morning! 🌅";
+         }
+         else if (hour >= 12 && hour < 17)
+         {
+             return "Good afternoon! 🌞";
+         }
+         else if (hour >= 17 && hour < 22)
+         {
+             return "Good evening! 🌆";
+         }
+         else
+         {
+             return "Hello! 👋";
+         }
+     }
+    
+    // List of incomplete goals pending user decision
+    private List<Goal> _pendingIncompleteGoals = new List<Goal>();
+    
+    // Method to handle user's response about moving goals
+    public void HandleMoveGoalsResponse(string response)
+    {
+        if (_pendingIncompleteGoals == null || _pendingIncompleteGoals.Count == 0)
+        {
+            return; // No pending goals to move
+        }
+        
+        if (response.ToLower().Contains("yes") || response.ToLower().Contains("yeah") || 
+            response.ToLower().Contains("sure") || response.ToLower().Contains("ok"))
+        {
+            // Move incomplete goals to today
+            string today = DateTime.Now.ToString("yyyy-MM-dd");
+            GoalList newGoalList = new GoalList { goals = new List<Goal>() };
+            
+            foreach (Goal goal in _pendingIncompleteGoals)
+            {
+                // Create a new goal for today
+                Goal newGoal = new Goal
+                {
+                    text = goal.text,
+                    timing = goal.timing,
+                    time = DateTime.Now.ToString("h:mmtt dd MMMM dddd yyyy"),
+                    completed = false
+                };
+                
+                newGoalList.goals.Add(newGoal);
+            }
+            
+            // Save the moved goals to today's date
+            DatabaseManager.Instance.SaveGoalsForDate(newGoalList, today);
+            
+            chatUIManager.AddAppMessage("I've moved your incomplete goals to today. Good luck!");
+            
+            // Clear the pending goals
+            _pendingIncompleteGoals.Clear();
+            
+            // Show today's goals after a short delay
+            Invoke("ShowTodaysGoals", 1f);
+        }
+        else
+        {
+            // User doesn't want to move goals
+            chatUIManager.AddAppMessage("No problem. Would you like to set new goals for today instead?");
+            _pendingIncompleteGoals.Clear();
+        }
+    }
+    
     // Display all of today's goals
     public void ShowTodaysGoals()
     {
@@ -215,19 +413,19 @@ public class GoalReminderManager : MonoBehaviour
             // Add upcoming goals
             if (upcomingGoals.Count > 0)
             {
-                message += "\n📅 Upcoming:\n" + string.Join("\n", upcomingGoals);
+                message += "\nUpcoming:\n" + string.Join("\n", upcomingGoals);
             }
             
             // Add goals without timing
             if (noTimingGoals.Count > 0)
             {
-                message += "\n\n⏰ No Timing Set:\n" + string.Join("\n", noTimingGoals);
+                message += "\n\nNo Timing Set:\n" + string.Join("\n", noTimingGoals);
             }
             
             // Add completed goals
             if (completedGoals.Count > 0)
             {
-                message += "\n\n✅ Completed:\n" + string.Join("\n", completedGoals);
+                message += "\n\nCompleted:\n" + string.Join("\n", completedGoals);
             }
             
             Debug.Log(message);

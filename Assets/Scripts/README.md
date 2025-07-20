@@ -8,6 +8,7 @@ This is an MVP implementation of a goal reminder system that outputs reminders t
 - **Time-based Reminders**: Get reminders when a goal's time is reached
 - **Goal Management**: View, complete, and test reminders for goals
 - **Command System**: Use special commands to interact with the system
+- **Intent Classification**: Automatically detect user intent (goals, streak updates, greetings, etc.)
 
 ## Commands
 
@@ -40,8 +41,17 @@ To add notification sounds for goal reminders:
 The system consists of the following key components:
 
 - **GoalReminderManager**: Checks goal timings against current time and displays reminders
-- **DatabaseManager**: Handles saving and loading goals from Firebase
-- **ChatInputManager**: Processes user input and special commands
+- **DatabaseManager**: Handles saving and loading goals and streaks from Firebase
+- **ChatInputManager**: Processes user input, classifies intent, and handles special commands
 - **ChatUIManager**: Displays messages in the chat interface
+- **PromptBuilder**: Constructs prompts for the AI, including intent classification
 
 The reminder check runs every minute by default, but this can be adjusted in the GoalReminderManager component.
+
+## Streak Tracking
+
+The system now supports tracking streaks (like NoFap, workout, meditation):
+
+- Automatically detects when a user is updating a streak
+- Stores streak information including name, status, current streak count, and longest streak
+- Updates streak information in Firebase

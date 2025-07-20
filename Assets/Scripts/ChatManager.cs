@@ -1,10 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
-using System;
-using System.Collections.Generic; // For TextMeshPro input and text, if you want nicer text
-using System.Linq;
-
 public class ChatManager : MonoBehaviour
 {
     
@@ -101,6 +95,7 @@ public class ChatManager : MonoBehaviour
 
     public void SaveGoals(string jsonResponse)
     {
+        Debug.Log(jsonResponse);
         try
         {
             databaseManager.SaveGoalsToFirebase(JsonUtility.FromJson<GoalList>(jsonResponse));
@@ -109,10 +104,10 @@ public class ChatManager : MonoBehaviour
 
             chatStateController.SetChatState( ChatState.Idle);
         }
-        catch (Exception ex)
+        catch (System.Exception ex)
         {
             Debug.LogError("Failed to parse goal JSON: " + ex.Message);
-            chatUIManager.AddAppMessage("⚠️ Couldn't understand your goals. Try rephrasing.");
+            chatUIManager.AddAppMessage("Couldn't understand your goals. Try rephrasing.");
         }
     }
 

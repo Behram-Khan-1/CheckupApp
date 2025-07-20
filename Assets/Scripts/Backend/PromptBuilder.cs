@@ -3,50 +3,52 @@ using System.Diagnostics;
 public class PromptBuilder
 {
 
-  PromptType currentPrompt = PromptType.GetGoals;
+    PromptType currentPrompt = PromptType.GetGoals;
 
-  public void SetPromptType(PromptType type)
-  {
-    currentPrompt = type;
-  }
-  public string BuildPrompt()
-  {
-    switch (currentPrompt)
+    public void SetPromptType(PromptType type)
     {
-      case PromptType.GetGoals:
-        return goalPrompt + " \n " + fullPrompt;
-      case PromptType.AskForTiming:
-        return askTimingPrompt + " \n " + fullPrompt;
-      case PromptType.SetGoalTiming:
-        return timingPrompt + " \n " + fullPrompt;
-      case PromptType.AskForCompletion:
-        return "The user had the following task: '" + fullPrompt + "'. Ask if they completed it today.";
-      case PromptType.MotivationReply:
-        return "Send a short motivational message related to: " + fullPrompt;
-      default:
-        return "Be a supportive assistant.";
+        currentPrompt = type;
     }
-  }
+    public string BuildPrompt()
+    {
+        switch (currentPrompt)
+        {
+            case PromptType.GetGoals:
+                return goalPrompt + " \n " + fullPrompt;
+            case PromptType.AskForTiming:
+                return askTimingPrompt + " \n " + fullPrompt;
+            case PromptType.SetGoalTiming:
+                return timingPrompt + " \n " + fullPrompt;
+            case PromptType.AskForCompletion:
+                return "The user had the following task: '" + fullPrompt + "'. Ask if they completed it today.";
+            case PromptType.MotivationReply:
+                return "Send a short motivational message related to: " + fullPrompt;
+            case PromptType.IntentClassification:
+                return intentClassificationPrompt + " \n " + fullPrompt;
+            default:
+                return "Be a supportive assistant. Keep your responses brief and concise, especially for greetings and casual conversation. Do not use emojis in any responses.";
+        }
+    }
 
 
 
 
-  private string fullPrompt = "";
+    private string fullPrompt = "";
 
-  public void Append(string userMessage)
-  {
-    if (string.IsNullOrWhiteSpace(fullPrompt))
-      fullPrompt = userMessage;
-    else
-      fullPrompt += "\n" + userMessage;
-  }
+    public void Append(string userMessage)
+    {
+        if (string.IsNullOrWhiteSpace(fullPrompt))
+            fullPrompt = userMessage;
+        else
+            fullPrompt += "\n" + userMessage;
+    }
 
-  public string GetPrompt() => fullPrompt;
+    public string GetPrompt() => fullPrompt;
 
-  public void Reset() => fullPrompt = "";
+    public void Reset() => fullPrompt = "";
 
 
-  private string goalPrompt = @"You are a goal-tracking assistant.
+    private string goalPrompt = @"You are a goal-tracking assistant.
   The user has entered a series of messages describing what they want to achieve today or in general.
   Your job is to extract clear, structured goals from these messages.
   Respond ONLY in this JSON format:
@@ -96,7 +98,7 @@ public class PromptBuilder
    Below is the users message ";
 
 
-  private string askTimingPrompt = @"
+    private string askTimingPrompt = @"
 You are a helpful and supportive goal-tracking assistant.
 The user has already entered some goals, but did not specify when they would like to work on or complete some of them.
 Your job is to ask the user for the timing or deadline of each goal.
@@ -108,7 +110,7 @@ Guidelines:
 Goals:
 ";
 
-  private string timingPrompt = @"
+    private string timingPrompt = @"
 You are a helpful and supportive goal-tracking assistant.
 The user has entered timing of the goals he didnt mention earlier, 
 You have to map each goal to its timing now and then output their responses in the following JSON format:
@@ -159,6 +161,58 @@ Guidelines:
 Goals:
 ";
 
+    private string intentClassificationPrompt = @"You are a goal-tracking assistant that can classify user messages by intent.
+Analyze the user's message and determine the primary intent.
+
+Respond ONLY in this JSON format:
+{
+  ""intent"": ""[intent_type]"",
+  ""details"": {}
+}
+
+The intent_type must be one of:
+- ""goal:"": User is setting a goal or task to complete (ONLY classify as goal if the user is clearly stating something they want to accomplish or do)
+- ""streak_update"": User is updating a streak (like NoFap, workout, meditation)
+- ""greeting"": User is saying hello or starting a conversation (e.g., hi, hello, hey, good morning)
+- ""smalltalk"": User is making casual conversation (e.g., how are you, what's up)
+- ""other"": Any other intent not covered above
+
+For each intent type, include these specific details:
+
+1. If intent is ""goal"":
+{
+  ""intent"": ""goal"",
+  ""goal"": {
+    ""text"": ""[full goal description]"",
+    ""timing"": ""[timing if specified, otherwise empty]""
+  }
+}
+
+2. If intent is ""streak_update"":
+{
+  ""intent"": ""streak_update"",
+  ""streak"": {
+    ""name"": ""[streak name, e.g. 'nofap', 'workout', 'meditation']"",
+    ""status"": ""[status update, e.g. 'completed', 'failed', 'day 5']""
+  }
+}
+
+3. For other intents (greeting, smalltalk, other):
+{
+  ""intent"": ""[intent_type]""
+}
+
+Examples:
+- ""I need to finish my project by tomorrow"" → {""intent"": ""goal"", ""goal"": {""text"": ""finish my project"", ""timing"": ""tomorrow""}}
+- ""I want to start exercising"" → {""intent"": ""goal"", ""goal"": {""text"": ""start exercising"", ""timing"": ""}
+- ""I worked out today"" → {""intent"": ""streak_update"", ""streak"": {""name"": ""workout"", ""status"": ""completed""}}
+- ""Hello"" → {""intent"": ""greeting""}
+- ""Hi there"" → {""intent"": ""greeting""}
+- ""Good morning"" → {""intent"": ""greeting""}
+- ""How are you?"" → {""intent"": ""smalltalk""}
+- ""What's the weather like?"" → {""intent"": ""smalltalk""}
+
+Analyze the following user message:";
 }
 
 

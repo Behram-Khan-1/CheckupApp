@@ -6,5 +6,6 @@ public enum PromptType
     SetGoalTiming,
     AskForCompletion,
     MotivationReply,
+    IntentClassification,
     Idle
 }

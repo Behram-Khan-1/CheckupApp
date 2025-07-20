@@ -9,6 +9,7 @@ public class GoalTimingManager
     public ChatUIManager chatUIManager;
     private GeminiApiClient geminiApiClient;
     private PromptBuilder promptBuilder;
+    private string pendingGoalText; // Store the goal text that is waiting for timing
     public GoalTimingManager(ChatStateController chatStateController,
      GeminiApiClient geminiApiClient,
      ChatUIManager chatUIManager)
@@ -47,6 +48,27 @@ public class GoalTimingManager
     {
         promptBuilder.SetPromptType(PromptType.SetGoalTiming);
 
+        // If we have a pending goal text, we should use it directly
+        if (!string.IsNullOrEmpty(pendingGoalText))
+        {
+            promptBuilder.Reset();
+            promptBuilder.Append(pendingGoalText);
+            promptBuilder.Append("User Timing Response " + userMessage);
+            
+            Debug.Log("SetGoalTiming for pending goal");
+            geminiApiClient.SendPrompt(promptBuilder.BuildPrompt(),
+             chatUIManager.AddAppMessage,
+            UpdateGoaltiming);
+
+            // Clear the pending goal text after processing
+            pendingGoalText = null;
+            
+            chatStateController.SetChatMode(ChatMode.Normal);
+            chatStateController.SetChatState(ChatState.Idle);
+            return;
+        }
+        
+        // Otherwise, load goals from Firebase as before
         DatabaseManager.Instance.LoadGoalsFromFirebase(goalList =>
         {
             List<Goal> goalsNeedingTiming = goalList.goals.Where(g => string.IsNullOrEmpty(g.timing)).ToList();
@@ -78,7 +100,22 @@ public class GoalTimingManager
     {
         var response = JsonUtility.FromJson<GoalList>(jsonResponse);
         DatabaseManager.Instance.UpdateGoalsTiming(response.goals);
+        
+        // Clear any remaining pendingGoalText
+        pendingGoalText = null;
+        
         GoalsNeedingTiming();
     }
 
+    // Store the goal text that is waiting for timing information
+    public void SetPendingGoalText(string goalText)
+    {
+        pendingGoalText = goalText;
+    }
+
+    // Get the pending goal text
+    public string GetPendingGoalText()
+    {
+        return pendingGoalText;
+    }
 }
