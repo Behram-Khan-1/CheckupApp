@@ -19,16 +19,16 @@ public class ChatInputManager : MonoBehaviour
     {
         inputField.onValueChanged.AddListener(OnValueChanged);
         promptBuilder = PromptService.Instance.promptBuilder;
-        
+
 
     }
 
     // Reference to GoalReminderManager for handling goal transitions
     private GoalReminderManager goalReminderManager;
-    
+
     // Flag to track if we're waiting for a response about moving goals
     private bool waitingForMoveGoalsResponse = false;
-    
+
     // Flag to indicate we're setting goals for tomorrow
     private bool _setGoalsForTomorrow = false;
     public bool SetGoalsForTomorrow
@@ -36,7 +36,7 @@ public class ChatInputManager : MonoBehaviour
         get { return _setGoalsForTomorrow; }
         set { _setGoalsForTomorrow = value; }
     }
-    
+
     void Awake()
     {
         // Find the GoalReminderManager in the scene
@@ -46,24 +46,24 @@ public class ChatInputManager : MonoBehaviour
             Debug.LogError("ChatInputManager requires a GoalReminderManager in the scene");
         }
     }
-    
+
     public void OnSendButtonClicked()
     {
         userMessage = inputField.text;
-        
+
         // Check for special commands
         if (ProcessSpecialCommands(userMessage))
         {
             inputField.text = "";
             return;
         }
-        
+
         // Add user message to chat
         if (!string.IsNullOrEmpty(userMessage) && !string.IsNullOrWhiteSpace(userMessage))
         {
             chatUIManager.AddUserMessage(userMessage);
             inputField.text = "";
-            
+
             // Check if we're waiting for a response about moving goals
             if (waitingForMoveGoalsResponse)
             {
@@ -99,16 +99,16 @@ public class ChatInputManager : MonoBehaviour
             }
         }
     }
-    
+
     // Helper method to identify common greeting patterns
     private bool IsGreeting(string message)
     {
         string lowerMessage = message.ToLower().Trim();
-        
+
         // Check for common greeting patterns
-        return lowerMessage == "hi" || 
-               lowerMessage == "hello" || 
-               lowerMessage == "hey" || 
+        return lowerMessage == "hi" ||
+               lowerMessage == "hello" ||
+               lowerMessage == "hey" ||
                lowerMessage == "hi there" ||
                lowerMessage == "hello there" ||
                lowerMessage == "good morning" ||
@@ -116,23 +116,23 @@ public class ChatInputManager : MonoBehaviour
                lowerMessage == "good evening" ||
                lowerMessage == "greetings";
     }
-    
+
     private void ClassifyMessageIntent(string message)
     {
         // Set prompt type to intent classification
         promptBuilder.SetPromptType(PromptType.IntentClassification);
-        
+
         // Append user message to the prompt
         promptBuilder.Append(message);
-        
+
         // Set chat state to processing
         chatStateController.SetChatState(ChatState.MessageSent);
-        
+
         // Get the API client to process the intent classification
         GeminiApiClient apiClient = FindObjectOfType<GeminiApiClient>();
         if (apiClient != null)
         {
-            apiClient.SendPrompt(promptBuilder.BuildPrompt(), OnIntentClassificationResponse);
+            apiClient.SendPrompt(promptBuilder.BuildPrompt(), chatUIManager.AddAppMessage, OnIntentClassificationResponse);
         }
         else
         {
@@ -140,39 +140,40 @@ public class ChatInputManager : MonoBehaviour
             chatUIManager.AddAppMessage("Sorry, I couldn't process your message.");
         }
     }
-    
+
     private void OnIntentClassificationResponse(string jsonResponse)
     {
         try
         {
             // Parse the JSON response to determine intent
+            Debug.Log("Attempting to parse Intent JSON: " + jsonResponse);
             IntentClassification intent = JsonUtility.FromJson<IntentClassification>(jsonResponse);
-            
+
             if (intent == null)
             {
                 Debug.LogError("Failed to parse intent classification response");
                 chatUIManager.AddAppMessage("Sorry, I couldn't understand your message.");
                 return;
             }
-            
+
             // Process based on intent
             switch (intent.intent)
             {
                 case "goal":
                     ProcessGoalIntent(intent);
                     break;
-                    
+
                 case "streak_update":
                     ProcessStreakUpdateIntent(intent);
                     break;
-                    
+
                 case "greeting":
                 case "smalltalk":
                 case "other":
                     // Just reply normally
                     ProcessNormalConversation(userMessage);
                     break;
-                    
+
                 default:
                     ProcessNormalConversation(userMessage);
                     break;
@@ -184,24 +185,24 @@ public class ChatInputManager : MonoBehaviour
             chatUIManager.AddAppMessage("Sorry, I couldn't process your message.");
         }
     }
-    
+
     private void ProcessGoalIntent(IntentClassification intent)
     {
         if (intent.goal != null)
         {
             string goalText = intent.goal.text;
             string timing = intent.goal.timing;
-            
+
             if (string.IsNullOrEmpty(timing))
             {
                 // No timing provided, ask for timing
                 chatStateController.SetChatMode(ChatMode.AwaitingGoalTiming);
                 promptBuilder.SetPromptType(PromptType.AskForTiming);
                 promptBuilder.Append(goalText);
-                
+
                 // Store the goal text for later
                 goalTimingManager.SetPendingGoalText(goalText);
-                
+
                 // Send the prompt to get timing
                 GeminiApiClient apiClient = FindObjectOfType<GeminiApiClient>();
                 if (apiClient != null)
@@ -219,54 +220,54 @@ public class ChatInputManager : MonoBehaviour
                     time = "",  // Will be calculated later
                     completed = false
                 };
-                
+
                 GoalList goalList = new GoalList
                 {
                     goals = new List<Goal> { newGoal }
                 };
-                
+
                 // Save to database
                 DatabaseManager.Instance.SaveGoalsToFirebase(goalList);
-                
+
                 // Confirm to user
                 chatUIManager.AddAppMessage($"Added goal: {goalText} at {timing}");
-                
+
                 // Refresh goals display
                 Invoke("RefreshGoalsDisplay", 1f);
             }
         }
     }
-    
+
     private void ProcessStreakUpdateIntent(IntentClassification intent)
     {
         if (intent.streak != null)
         {
             string streakName = intent.streak.name;
             string streakStatus = intent.streak.status;
-            
+
             // Create streak object
             Streak streak = new Streak
             {
                 name = streakName,
                 status = streakStatus
             };
-            
+
             // Save to database
             DatabaseManager.Instance.SaveStreakUpdate(streak);
-            
+
             // Confirm to user
             chatUIManager.AddAppMessage($"Updated streak: {streakName} - {streakStatus}");
         }
     }
-    
+
     private void ProcessNormalConversation(string message)
     {
         // Reset to normal conversation mode
         chatStateController.SetChatMode(ChatMode.Normal);
         promptBuilder.SetPromptType(PromptType.Idle);
-        
+
         // Add specific instructions for greeting responses to keep them short
-        if (message.ToLower().Contains("hello") || message.ToLower().Contains("hi") || 
+        if (message.ToLower().Contains("hello") || message.ToLower().Contains("hi") ||
             message.ToLower().Contains("hey") || message.ToLower().Contains("morning") ||
             message.ToLower().Contains("afternoon") || message.ToLower().Contains("evening"))
         {
@@ -276,7 +277,7 @@ public class ChatInputManager : MonoBehaviour
         {
             promptBuilder.Append(message);
         }
-        
+
         // Send the prompt for a normal reply
         GeminiApiClient apiClient = FindObjectOfType<GeminiApiClient>();
         if (apiClient != null)
@@ -284,11 +285,11 @@ public class ChatInputManager : MonoBehaviour
             apiClient.SendPrompt(promptBuilder.BuildPrompt());
         }
     }
-    
+
     private bool ProcessSpecialCommands(string message)
     {
         string lowerMessage = message.ToLower().Trim();
-        
+
         // Help command
         if (lowerMessage == "/help" || lowerMessage == "help" || lowerMessage == "commands")
         {
@@ -296,7 +297,7 @@ public class ChatInputManager : MonoBehaviour
             ShowHelpCommands();
             return true;
         }
-        
+
         // Command to set goals for tomorrow
         if (lowerMessage == "/tomorrow" || lowerMessage == "set goals for tomorrow")
         {
@@ -306,7 +307,7 @@ public class ChatInputManager : MonoBehaviour
             SetGoalsForTomorrow = true;
             return true;
         }
-        
+
         // Command to show goals
         if (lowerMessage == "/goals" || lowerMessage == "show goals" || lowerMessage == "my goals")
         {
@@ -322,7 +323,7 @@ public class ChatInputManager : MonoBehaviour
             }
             return true;
         }
-        
+
         // Command to mark a goal as complete
         if (lowerMessage.StartsWith("/complete ") || lowerMessage.StartsWith("complete "))
         {
@@ -332,13 +333,13 @@ public class ChatInputManager : MonoBehaviour
                 chatUIManager.AddUserMessage(message);
                 DatabaseManager.Instance.MarkGoalAsCompleted(goalText, true);
                 chatUIManager.AddAppMessage($"✅ Marked goal as completed: {goalText}");
-                
+
                 // Refresh goals display
                 Invoke("RefreshGoalsDisplay", 1f);
             }
             return true;
         }
-        
+
         // Command to test a reminder for a goal
         if (lowerMessage.StartsWith("/test ") || lowerMessage.StartsWith("test reminder "))
         {
@@ -359,17 +360,17 @@ public class ChatInputManager : MonoBehaviour
             }
             return true;
         }
-        
+
         return false;
     }
-    
+
     // Process goals for tomorrow
     private void ProcessGoalsForTomorrow(string message)
     {
         // Set the prompt type to get goals
         promptBuilder.SetPromptType(PromptType.GetGoals);
         promptBuilder.Append(message);
-        
+
         // Send the prompt to get goals
         GeminiApiClient apiClient = FindObjectOfType<GeminiApiClient>();
         if (apiClient != null)
@@ -377,7 +378,7 @@ public class ChatInputManager : MonoBehaviour
             apiClient.SendPrompt(promptBuilder.BuildPrompt(), OnTomorrowGoalsResponse);
         }
     }
-    
+
     // Handle the response for tomorrow's goals
     private void OnTomorrowGoalsResponse(string response)
     {
@@ -385,15 +386,15 @@ public class ChatInputManager : MonoBehaviour
         {
             // Parse the goals from the response
             GoalList goalList = JsonUtility.FromJson<GoalList>(response);
-            
+
             if (goalList != null && goalList.goals != null && goalList.goals.Count > 0)
             {
                 // Calculate tomorrow's date
                 string tomorrowDate = DateTime.Now.AddDays(1).ToString("yyyy-MM-dd");
-                
+
                 // Save the goals for tomorrow's date
                 DatabaseManager.Instance.SaveGoalsForDate(goalList, tomorrowDate);
-                
+
                 // Confirm to the user
                 chatUIManager.AddAppMessage("I've set your goals for tomorrow. You can view them tomorrow or by using the /goals command.");
             }
@@ -408,7 +409,7 @@ public class ChatInputManager : MonoBehaviour
             chatUIManager.AddAppMessage("There was an error setting your goals for tomorrow. Please try again.");
         }
     }
-    
+
     private void ShowHelpCommands()
     {
         string helpMessage = "Available Commands:\n\n" +
@@ -418,10 +419,10 @@ public class ChatInputManager : MonoBehaviour
                            "• /tomorrow - Set goals for tomorrow\n" +
                            "• /help - Show this help message\n\n" +
                            "You can also just type normally to add new goals!";
-        
+
         chatUIManager.AddAppMessage(helpMessage);
     }
-    
+
     private void RefreshGoalsDisplay()
     {
         GoalReminderManager reminderManager = FindObjectOfType<GoalReminderManager>();

@@ -50,66 +50,8 @@ public class ChatManager : MonoBehaviour
         }
     }
 
-    void Update()
-    {
-        if (chatStateController.GetChatState() == ChatState.MessageSent
-             || chatStateController.GetChatState() == ChatState.Typing)
-        {
-            ReplyTimer();
-        }
-    }
-
-
-
-
-
-
-
-    private void ReplyTimer()
-    {
-        if (chatStateController.GetChatState() == ChatState.Typing)
-        {
-            time = initialTime;
-            return;
-        }
-
-        // Debug.Log(time);
-        time = Timer.TimerStart(time);
-        if (time <= 0)
-        {
-            chatStateController.SetChatState(ChatState.WaitingForReply);
-            time = initialTime; //Later make send button unclickable when not received reply
-            StartCoroutine(geminiApiClient.SendPromptCoroutine(promptBuilder.BuildPrompt(),
-             chatUIManager.AddAppMessage,
-              SaveGoals));
-
-
-
-            Debug.Log("ReplyTimer Prompt Response");
-            promptBuilder.Reset();
-        }
-
-    }
-
-
-
-    public void SaveGoals(string jsonResponse)
-    {
-        Debug.Log(jsonResponse);
-        try
-        {
-            databaseManager.SaveGoalsToFirebase(JsonUtility.FromJson<GoalList>(jsonResponse));
-            Debug.Log("Goals saved to Firebase successfully!");
-            goalTimingManager.GoalsNeedingTiming();
-
-            chatStateController.SetChatState( ChatState.Idle);
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError("Failed to parse goal JSON: " + ex.Message);
-            chatUIManager.AddAppMessage("Couldn't understand your goals. Try rephrasing.");
-        }
-    }
+    // The Update, ReplyTimer, and SaveGoals methods have been removed to prevent
+    // conflicts with the new intent-based system in ChatInputManager.
 
     #region Helpers
     /// <summary>

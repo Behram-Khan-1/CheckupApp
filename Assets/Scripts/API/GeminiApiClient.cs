@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 
 public class GeminiApiClient : MonoBehaviour
-{ 
+{
     private const string apiKey = "AIzaSyDcJCyS3nAuBUrmLPzgKQAbGM-T3WZGh_Y";
     private string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=";
 
@@ -43,17 +43,26 @@ public class GeminiApiClient : MonoBehaviour
         if (www.result == UnityWebRequest.Result.Success)
         {
 
+            Debug.Log("Raw Gemini API Response: " + www.downloadHandler.text);
             GeminiResponse res = JsonUtility.FromJson<GeminiResponse>(www.downloadHandler.text);
-            var cleanString = JsonHelper.CleanMarkdownJson(res.candidates[0].content.parts[0].text);
-            string reply = cleanString;
-            // Debug.Log(reply);
-            response?.Invoke(reply);
+            string rawText = res.candidates[0].content.parts[0].text;
+            string cleanedJson = JsonHelper.CleanMarkdownJson(rawText);
 
-            // If caller wants JSON processing
+            // The 'response' action is for displaying text to the user.
+            // We generate a human-readable message for it.
+
+            Debug.Log(cleanedJson);
+            // string displayMessage = JsonHelper.ExtractHumanReadableContent(cleanedJson);
+            if (response != null && !string.IsNullOrEmpty(cleanedJson))
+            {
+                response.Invoke(cleanedJson);
+            }
+
+            // The 'onJsonReply' action is for processing data.
+            // We pass the raw, cleaned JSON to it.
             if (onJsonReply != null)
             {
-                Debug.Log("Raw Gemini reply:\n" + reply);
-                onJsonReply.Invoke(reply);
+                onJsonReply.Invoke(cleanedJson);
             }
         }
         else
