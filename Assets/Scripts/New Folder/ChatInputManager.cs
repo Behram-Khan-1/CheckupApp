@@ -132,7 +132,7 @@ public class ChatInputManager : MonoBehaviour
         GeminiApiClient apiClient = FindObjectOfType<GeminiApiClient>();
         if (apiClient != null)
         {
-            apiClient.SendPrompt(promptBuilder.BuildPrompt(), chatUIManager.AddAppMessage, OnIntentClassificationResponse);
+            apiClient.SendPrompt(promptBuilder.BuildPrompt(), onTextResponse: chatUIManager.AddAppMessage, onJsonReply: OnIntentClassificationResponse);
         }
         else
         {
@@ -183,6 +183,11 @@ public class ChatInputManager : MonoBehaviour
         {
             Debug.LogError($"Error processing intent classification: {e.Message}");
             chatUIManager.AddAppMessage("Sorry, I couldn't process your message.");
+        }
+        finally
+        {
+            // Always reset the prompt builder after an operation
+            promptBuilder.Reset();
         }
     }
 

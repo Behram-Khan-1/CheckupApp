@@ -7,19 +7,13 @@ public class JsonHelper
 {
     public static string CleanMarkdownJson(string raw)
     {
+        if (string.IsNullOrEmpty(raw)) return "";
+
         string cleaned = raw
             .Replace("```json", "")
             .Replace("```", "")
             .Trim();
-
-        // Check if the cleaned string is a JSON object or array
-        if ((cleaned.StartsWith("{") && cleaned.EndsWith("}")) ||
-            (cleaned.StartsWith("[") && cleaned.EndsWith("]")))
-        {
-            // This is likely a JSON response, extract the content for display
-            return ExtractHumanReadableContent(cleaned);
-        }
-
+        
         return cleaned;
     }
 
